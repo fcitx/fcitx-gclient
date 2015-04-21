@@ -30,20 +30,20 @@
 #include <stdlib.h>
 #include <string.h>
 #include <gtk/gtk.h>
+#if defined(GDK_WINDOWING_X11) && defined(X11_FOUND)
+#include <gdk/gdkx.h>
+#endif
 #include <gdk/gdkkeysyms.h>
 #include <xkbcommon/xkbcommon-compose.h>
 #include <fcitx/inputcontext.h>
 
+#include "common.h"
 #include "fcitximcontext.h"
 #include "fcitx-gclient/fcitxconnection.h"
 #include "fcitx-gclient/fcitxclient.h"
 
 #if !GTK_CHECK_VERSION (2, 91, 0)
 # define DEPRECATED_GDK_KEYSYMS 1
-#endif
-
-#if GTK_CHECK_VERSION (2, 24, 0)
-# define NEW_GDK_WINDOW_GET_DISPLAY
 #endif
 
 static const guint32 purpose_related_capability =
@@ -118,6 +118,10 @@ fcitx_im_context_get_preedit_string(GtkIMContext *context, gchar **str,
 
 static gboolean
 _set_cursor_location_internal(FcitxIMContext *fcitxcontext);
+#if defined(GDK_WINDOWING_X11) && defined(X11_FOUND)
+static gboolean
+_send_uuid_to_x(FcitxIMContext *fcitxcontext);
+#endif
 static void
 _slave_commit_cb(GtkIMContext *slave,
                  gchar *string,
@@ -916,6 +920,36 @@ fcitx_im_context_set_cursor_location(GtkIMContext *context,
 
     return;
 }
+#if defined(GDK_WINDOWING_X11) && defined(X11_FOUND)
+
+static gboolean
+_send_uuid_to_x(FcitxIMContext *fcitxcontext)
+{
+    do {
+        Display* display = gdk_x11_get_default_xdisplay();
+        if (!display) {
+            break;
+        }
+        XEvent event;
+        Atom atom = XInternAtom(display, "_FCITX_SERVER", False);
+        if (!atom) {
+            break;
+        }
+        Window w = XGetSelectionOwner(display, atom);
+        if (!w) {
+            break;
+        }
+        event.xclient.type = ClientMessage;
+        event.xclient.display = display;
+        event.xclient.message_type = atom;
+        event.xclient.format = 8;
+        event.xclient.window = w;
+        fcitx_client_get_uuid(fcitxcontext->client, event.xclient.data.b);
+        XSendEvent(display, w, False, NoEventMask, &event);
+    } while(0);
+    return FALSE;
+}
+#endif
 
 static gboolean
 _set_cursor_location_internal(FcitxIMContext *fcitxcontext)
@@ -1348,11 +1382,7 @@ _create_gdk_event(FcitxIMContext *fcitxcontext, guint keyval, guint state,
     event->length = 0;
     event->hardware_keycode = 0;
     if (event->window) {
-#ifndef NEW_GDK_WINDOW_GET_DISPLAY
         GdkDisplay      *display = gdk_display_get_default();
-#else
-        GdkDisplay      *display = gdk_window_get_display(event->window);
-#endif
         GdkKeymap       *keymap  = gdk_keymap_get_for_display(display);
         GdkKeymapKey    *keys;
         gint             n_keys = 0;
@@ -1499,6 +1529,22 @@ void _fcitx_im_context_connect_cb(FcitxClient* im, void* user_data)
     _fcitx_im_context_set_capability(context, TRUE);
     if (context->has_focus && _focus_im_context == (GtkIMContext*) context && fcitx_client_is_valid(context->client))
         fcitx_client_focus_in(context->client);
+
+#if defined(GDK_WINDOWING_X11) && defined(X11_FOUND)
+#if GTK_CHECK_VERSION(3, 0, 0)
+    GdkDisplay* display = gdk_display_get_default();
+    if (GDK_IS_X11_DISPLAY (display))
+#endif
+    {
+        gdk_threads_add_idle_full(G_PRIORITY_DEFAULT_IDLE,
+                                (GSourceFunc) _send_uuid_to_x,
+                                g_object_ref(context),
+                                (GDestroyNotify) g_object_unref);
+    }
+#endif
+    /* set_cursor_location_internal() will get origin from X server,
+     * it blocks UI. So delay it to idle callback. */
+
     /* set_cursor_location_internal() will get origin from X server,
      * it blocks UI. So delay it to idle callback. */
     gdk_threads_add_idle_full(G_PRIORITY_DEFAULT_IDLE,

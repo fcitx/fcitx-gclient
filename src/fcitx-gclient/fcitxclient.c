@@ -18,6 +18,7 @@
  */
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
 #include <stdio.h>
 #include "common.h"
 #include "fcitxclient.h"
@@ -54,8 +55,8 @@ struct _ProcessKeyStruct {
 struct _FcitxClientPrivate {
     GDBusProxy* improxy;
     GDBusProxy* icproxy;
-    char icname[64];
-    int id;
+    guint8 uuid[16];
+    gchar* path;
     GCancellable* cancellable;
     FcitxConnection* connection;
 };
@@ -65,7 +66,7 @@ static const gchar introspection_xml[] =
     "<interface name=\"org.fcitx.Fcitx.InputMethod2\">"
     "<method name=\"CreateIC\">"
     "<arg name=\"parameter\" direction=\"in\" type=\"a{sv}\"/>"
-    "<arg name=\"icid\" direction=\"out\" type=\"i\"/>"
+    "<arg name=\"icid\" direction=\"out\" type=\"o\"/>"
     "<arg name=\"uuid\" direction=\"out\" type=\"ay\"/>"
     "</method>"
     "</interface>"
@@ -544,6 +545,7 @@ fcitx_client_init(FcitxClient *self)
     self->priv->cancellable = NULL;
     self->priv->improxy = NULL;
     self->priv->icproxy = NULL;
+    self->priv->path = NULL;
 }
 
 static void
@@ -636,12 +638,19 @@ _fcitx_client_create_ic_phase1_finished(GObject *source_object,
 
     self->priv->cancellable = g_cancellable_new ();
 
+    int32_t pid = getpid();
 
+    GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE_VARDICT);
+    g_variant_builder_add(builder, "{sv}", "pid", g_variant_new_int32(pid));
+    const gchar* name = g_get_prgname();
+    if (name) {
+        g_variant_builder_add(builder, "{sv}", "appname", g_variant_new_string(name));
+    }
 
     g_dbus_proxy_call(
         self->priv->improxy,
         "CreateIC",
-        g_variant_new_parsed("([])"),
+        g_variant_new("(a{sv})", builder),
         G_DBUS_CALL_FLAGS_NONE,
         -1,           /* timeout */
         self->priv->cancellable,
@@ -661,7 +670,14 @@ _fcitx_client_create_ic_cb(GObject *source_object,
         g_object_unref (self->priv->cancellable);
         self->priv->cancellable = NULL;
     }
-    GVariant* result = g_dbus_proxy_call_finish(G_DBUS_PROXY(source_object), res, NULL);
+
+    GError* error = NULL;
+    GVariant* result = g_dbus_proxy_call_finish(G_DBUS_PROXY(source_object), res, &error);
+
+    if (error) {
+        g_warning("create ic failed: %s", error->message);
+        g_error_free(error);
+    }
 
     if (!result) {
         /* unref for _fcitx_client_phase1_finish */
@@ -669,12 +685,34 @@ _fcitx_client_create_ic_cb(GObject *source_object,
         return;
     }
 
-    gboolean enable;
-    guint32 key1, state1, key2, state2;
-    g_variant_get(result, "(ibuuuu)", &self->priv->id, &enable, &key1, &state1, &key2, &state2);
-    g_variant_unref(result);
 
-    sprintf(self->priv->icname, "/inputcontext/%d", self->priv->id);
+    GVariantIter* uuidIter = NULL;
+    gchar* path;
+    g_variant_get(result, "(oay)", &path, &uuidIter);
+
+    gboolean invalid = FALSE;
+    if (uuidIter) {
+        char byte;
+        int idx = 0;
+        while (g_variant_iter_next(uuidIter, "y", &byte, NULL)) {
+            if (idx == 16) {
+                invalid = TRUE;
+                break;
+            }
+            self->priv->uuid[idx] = byte;
+            idx++;
+        }
+        if (idx != 16) {
+            invalid = TRUE;
+        }
+    }
+    g_variant_iter_free(uuidIter);
+    if (!path || invalid) {
+        g_free(path);
+        return;
+    }
+    g_variant_unref(result);
+    self->priv->path = path;
 
     self->priv->cancellable = g_cancellable_new ();
     g_dbus_proxy_new(
@@ -682,7 +720,7 @@ _fcitx_client_create_ic_cb(GObject *source_object,
         G_DBUS_PROXY_FLAGS_NONE,
         _fcitx_client_get_clientic_info(),
         "org.fcitx.Fcitx",
-        self->priv->icname,
+        self->priv->path,
         "org.fcitx.Fcitx.InputContext2",
         self->priv->cancellable,
         _fcitx_client_create_ic_phase2_finished,
@@ -1084,6 +1122,16 @@ _fcitx_client_clean_up(FcitxClient* self, gboolean dont_emit_disconn)
             g_signal_emit(self, signals[DISCONNECTED_SIGNAL], 0);
     }
 
+    if (self->priv->path) {
+        g_free(self->priv->path);
+        self->priv->path = NULL;
+    }
+}
+
+FCITXGCLIENT_EXPORT
+void fcitx_client_get_uuid(FcitxClient* self, char uuid[16])
+{
+    memcpy(self->priv->uuid, uuid, 16);
 }
 
 // kate: indent-mode cstyle; replace-tabs on;

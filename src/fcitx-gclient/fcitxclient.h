@@ -86,6 +86,7 @@ void fcitx_client_set_cusor_rect(FcitxClient* self, int x, int y, int w, int h);
 void fcitx_client_set_cursor_rect(FcitxClient* self, int x, int y, int w, int h);
 void fcitx_client_set_surrounding_text(FcitxClient* self, gchar* text, guint cursor, guint anchor);
 void fcitx_client_set_capability(FcitxClient* self, guint flags);
+void fcitx_client_get_uuid(FcitxClient* self, char uuid[16]);
 
 void fcitx_client_reset(FcitxClient* self);
 

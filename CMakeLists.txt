@@ -58,6 +58,7 @@ if("${_isSystemPlatformLibDir}" STREQUAL "-1" AND "${_isSystemCxxLibDir}" STREQU
 endif("${_isSystemPlatformLibDir}" STREQUAL "-1" AND "${_isSystemCxxLibDir}" STREQUAL "-1")
 
 find_package(PkgConfig REQUIRED)
+find_package(X11)
 find_package(GTK2)
 find_package(GTK3)
 find_package(XKBCommon COMPONENTS XKBCommon)
