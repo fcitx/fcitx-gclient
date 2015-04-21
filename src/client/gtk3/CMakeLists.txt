@@ -1,4 +1,4 @@
-if (NOT TARGET XKBCommon::XKBCommon AND
+if (NOT TARGET XKBCommon::XKBCommon OR
     NOT TARGET GTK3::gtk)
 return()
 endif()
