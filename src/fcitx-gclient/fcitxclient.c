@@ -225,9 +225,12 @@ fcitx_client_dispose(GObject *object)
 #define g_signal_handlers_disconnect_by_data(instance, data) \
     g_signal_handlers_disconnect_matched ((instance), G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, (data))
 #endif
-    g_signal_handlers_disconnect_by_data(self->priv->connection,
-                                         self);
-    g_object_unref(self->priv->connection);
+    if (self->priv->connection) {
+        g_signal_handlers_disconnect_by_data(self->priv->connection,
+                                            self);
+        g_object_unref(self->priv->connection);
+        self->priv->connection = NULL;
+    }
     _fcitx_client_clean_up(self, TRUE);
 
     if (G_OBJECT_CLASS(fcitx_client_parent_class)->dispose != NULL)
@@ -656,6 +659,7 @@ _fcitx_client_create_ic_phase1_finished(GObject *source_object,
         self
     );
 
+    g_variant_builder_unref(builder);
 }
 
 static void
