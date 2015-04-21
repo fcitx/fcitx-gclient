@@ -29,9 +29,6 @@
  * A FcitxConnection allow to create a input context via DBus
  */
 
-#define fcitx_gclient_debug(...) g_log ("fcitx-connection", \
-                                      G_LOG_LEVEL_DEBUG,    \
-                                      __VA_ARGS__)
 struct _FcitxConnectionPrivate {
     guint watch_id;
     GCancellable* cancellable;

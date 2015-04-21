@@ -24,4 +24,13 @@
 
 #define FCITXGCLIENT_UNUSED(X) ((void) X);
 
+#if 0
+#define fcitx_gclient_debug(...) g_log ("fcitx-client",       \
+                                      G_LOG_LEVEL_DEBUG,    \
+                                      __VA_ARGS__)
+
+#else
+#define fcitx_gclient_debug(...)
+#endif
+
 #endif // COMMON_H

@@ -25,14 +25,6 @@
 #include "fcitxconnection.h"
 #include "marshall.h"
 
-#ifdef _DEBUG
-#define fcitx_gclient_debug(...) g_log ("fcitx-client",       \
-                                      G_LOG_LEVEL_DEBUG,    \
-                                      __VA_ARGS__)
-
-#else
-#define fcitx_gclient_debug(...)
-#endif
 typedef struct _ProcessKeyStruct ProcessKeyStruct;
 
 /**
@@ -671,13 +663,7 @@ _fcitx_client_create_ic_cb(GObject *source_object,
         self->priv->cancellable = NULL;
     }
 
-    GError* error = NULL;
-    GVariant* result = g_dbus_proxy_call_finish(G_DBUS_PROXY(source_object), res, &error);
-
-    if (error) {
-        g_warning("create ic failed: %s", error->message);
-        g_error_free(error);
-    }
+    GVariant* result = g_dbus_proxy_call_finish(G_DBUS_PROXY(source_object), res, NULL);
 
     if (!result) {
         /* unref for _fcitx_client_phase1_finish */
