@@ -36,6 +36,7 @@ typedef struct _ProcessKeyStruct ProcessKeyStruct;
 enum {
     PROP_0,
     PROP_CONNECTION,
+    PROP_INDEPENDENT
 };
 
 struct _ProcessKeyStruct {
@@ -51,6 +52,7 @@ struct _FcitxClientPrivate {
     gchar* path;
     GCancellable* cancellable;
     FcitxConnection* connection;
+    gboolean independent;
 };
 
 static const gchar introspection_xml[] =
@@ -533,6 +535,7 @@ fcitx_client_init(FcitxClient *self)
 {
     self->priv = FCITX_CLIENT_GET_PRIVATE(self);
 
+    self->priv->independent = FALSE;
     self->priv->connection = NULL;
     self->priv->cancellable = NULL;
     self->priv->improxy = NULL;
@@ -636,7 +639,10 @@ _fcitx_client_create_ic_phase1_finished(GObject *source_object,
     g_variant_builder_add(builder, "{sv}", "pid", g_variant_new_int32(pid));
     const gchar* name = g_get_prgname();
     if (name) {
-        g_variant_builder_add(builder, "{sv}", "appname", g_variant_new_string(name));
+        g_variant_builder_add(builder, "{sv}", "appName", g_variant_new_string(name));
+    }
+    if (self->priv->independent) {
+        g_variant_builder_add(builder, "{sv}", "independent", g_variant_new_boolean(TRUE));
     }
 
     g_dbus_proxy_call(
@@ -843,6 +849,14 @@ fcitx_client_class_init(FcitxClientClass *klass)
                                             "Fcitx Connection",
                                             "Fcitx Connection",
                                             FCITX_TYPE_CONNECTION,
+                                            G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
+
+    g_object_class_install_property(gobject_class,
+                                    PROP_INDEPENDENT,
+                                    g_param_spec_boolean("independent",
+                                            "Use global focus group or not",
+                                            "Use global focus group or not",
+                                            TRUE,
                                             G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY));
 
     /* install signals */
@@ -1078,6 +1092,9 @@ void fcitx_client_set_property(GObject* gobject, guint prop_id, const GValue* va
             g_object_ref_sink(self->priv->connection);
         }
         break;
+    case PROP_INDEPENDENT:
+        self->priv->independent = g_value_get_boolean(value);
+        break;
     default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID(gobject, prop_id, pspec);
         break;
@@ -1117,7 +1134,7 @@ _fcitx_client_clean_up(FcitxClient* self, gboolean dont_emit_disconn)
 FCITXGCLIENT_EXPORT
 void fcitx_client_get_uuid(FcitxClient* self, char uuid[16])
 {
-    memcpy(self->priv->uuid, uuid, 16);
+    memcpy(uuid, self->priv->uuid, 16);
 }
 
 // kate: indent-mode cstyle; replace-tabs on;

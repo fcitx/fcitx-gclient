@@ -939,6 +939,7 @@ _send_uuid_to_x(FcitxIMContext *fcitxcontext)
         if (!w) {
             break;
         }
+        memset(&event, 0, sizeof(XEvent));
         event.xclient.type = ClientMessage;
         event.xclient.display = display;
         event.xclient.message_type = atom;
