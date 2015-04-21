@@ -1,0 +1,3 @@
+
+ecm_optional_add_subdirectory(gtk2)
+ecm_optional_add_subdirectory(gtk3)
