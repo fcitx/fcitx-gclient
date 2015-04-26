@@ -17,7 +17,7 @@ set_target_properties( im-fcitx-gtk3 PROPERTIES PREFIX ""
   COMPILE_FLAGS "-fvisibility=hidden" OUTPUT_NAME "im-fcitx"
   LINK_FLAGS "-Wl,--no-undefined")
 
-target_link_libraries(im-fcitx-gtk3 XKBCommon::XKBCommon GTK3::gtk Fcitx::GClient Fcitx::Core)
+target_link_libraries(im-fcitx-gtk3 XKBCommon::XKBCommon GTK3::gtk Fcitx5::GClient Fcitx5::Core)
 if(X11_FOUND)
 target_include_directories(im-fcitx-gtk3 PRIVATE ${X11_INCLUDE_DIR})
 target_link_libraries(im-fcitx-gtk3 ${X11_X11_LIB})

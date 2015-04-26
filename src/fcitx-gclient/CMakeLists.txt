@@ -34,7 +34,7 @@ add_custom_command(OUTPUT marshall.h
 
 add_library(fcitx-gclient SHARED ${FCITX_GCLIENT_SOURCES}
   ${FCITX_GCLIENT_BUILT_SOURCES} ${FCITX_GCLIENT_BUILT_HEADERS})
-add_library(Fcitx::GClient ALIAS fcitx-gclient)
+add_library(Fcitx5::GClient ALIAS fcitx-gclient)
 set_target_properties(fcitx-gclient
   PROPERTIES VERSION ${FCITX_VERSION}
   SOVERSION 2
@@ -43,16 +43,16 @@ set_target_properties(fcitx-gclient
   EXPORT_NAME GClient)
 target_link_libraries(fcitx-gclient
     PRIVATE
-        GLib2::GLib GObject2::GObject Gio2::Gio Fcitx::Core)
-target_include_directories(fcitx-gclient PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..> $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}> $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}> $<INSTALL_INTERFACE:${CMAKE_INSTALL_FULL_INCLUDEDIR}>)
-configure_file(fcitx-gclient.pc.in ${CMAKE_CURRENT_BINARY_DIR}/fcitx-gclient.pc)
+        GLib2::GLib GObject2::GObject Gio2::Gio Fcitx5::Core)
+target_include_directories(fcitx-gclient PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..> $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}> $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}> "$<INSTALL_INTERFACE:${CMAKE_INSTALL_FULL_INCLUDEDIR}>/Fcitx5/FcitxGClient")
+configure_file(fcitx-gclient.pc.in ${CMAKE_CURRENT_BINARY_DIR}/fcitx-gclient.pc @ONLY)
 generate_export_header(fcitx-gclient BASE_NAME FcitxGClient)
 
 install(TARGETS fcitx-gclient EXPORT FcitxGClientTargets LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/fcitx-gclient.pc
   DESTINATION "${CMAKE_INSTALL_LIBDATADIR}/pkgconfig")
 install(FILES ${FCITX_GCLIENT_HEADERS}
-  DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/fcitx-gclient")
+  DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/Fcitx5/FcitxGClient/fcitx-gclient")
 
 ecm_setup_version(PROJECT
                   PACKAGE_VERSION_FILE "${CMAKE_CURRENT_BINARY_DIR}/FcitxGClientConfigVersion.cmake"
@@ -63,7 +63,7 @@ configure_package_config_file("${CMAKE_CURRENT_SOURCE_DIR}/FcitxGClientConfig.cm
                               INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/FcitxGClient
 )
 
-install(EXPORT FcitxGClientTargets DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/FcitxGClient FILE FcitxGClientTargets.cmake NAMESPACE Fcitx::)
+install(EXPORT FcitxGClientTargets DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/FcitxGClient FILE FcitxGClientTargets.cmake NAMESPACE Fcitx5::)
 
 install(FILES  "${CMAKE_CURRENT_BINARY_DIR}/FcitxGClientConfig.cmake"
                "${CMAKE_CURRENT_BINARY_DIR}/FcitxGClientConfigVersion.cmake"
